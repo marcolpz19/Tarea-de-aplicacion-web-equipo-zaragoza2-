@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inventario de materiales escolares</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #f0f4f4;
+        color: #193334;
+        font:
+          16px system-ui,
+          Arial,
+          sans-serif;
+      }
+
+      main {
+        max-width: 1080px;
+        margin: 35px auto;
+        padding: 18px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+      }
+      .muted {
+        color: #557070;
+      }
+
+      .panel {
+        background: #fff;
+        border-radius: 15px;
+        padding: 24px;
+        margin: 18px 0;
+        box-shadow: 0 8px 25px #1232;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 7px;
+        font-weight: 650;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 11px;
+        border: 1px solid #a9c0bd;
+        border-radius: 7px;
+        font: inherit;
+      }
+
+      button {
+        border: 0;
+        border-radius: 7px;
+        background: #176a65;
+        color: #fff;
+        padding: 11px 16px;
+        font: inherit;
+        cursor: pointer;
+        margin: 3px;
+      }
+
+      button.secondary {
+        background: #e5efee;
+        color: #193334;
+      }
+
+      button.edit {
+        background: #32784e;
+      }
+      button.delete {
+        background: #b13737;
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .actions {
+        margin-top: 18px;
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 10px;
+        border-bottom: 1px solid #dce9e6;
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      th {
+        background: #f1f8f6;
+      }
+
+      .online {
+        color: #087846;
+        font-weight: bold;
+      }
+
+      .offline {
+        color: #ab5e0d;
+        font-weight: bold;
+      }
+
+      .note {
+        background: #edf6f4;
+        padding: 12px;
+        border-radius: 8px;
+      }
+
+      .small {
+        font-size: 0.9rem;
+        color: #526b69;
+      }
+
+      #mensaje {
+        white-space: pre-wrap;
+      }
+
+      .campo-precio {
+        display: flex;
+        align-items: center;
+        border: 1px solid #a9c0bd;
+        border-radius: 7px;
+        background: #fff;
+        overflow: hidden;
+      }
+
+      .campo-precio span {
+        padding: 11px 12px;
+        background: #edf6f4;
+        color: #176a65;
+        font-weight: bold;
+      }
+
+      .campo-precio input {
+        border: none;
+        border-radius: 0;
+        outline: none;
+        min-width: 0;
+      }
+
+      @media (max-width: 620px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .panel {
+          padding: 16px;
+        }
+        main {
+          margin: 0;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <h1>Inventario de materiales escolares</h1>
+      <p class="muted">
+        Inventario con almacenamiento local y sincronización con Supabase.
+      </p>
+
+      <p class="note">Conexión: <strong id="conexion">Comprobando…</strong></p>
+
+      <p class="note">
+        Estado de sincronización:
+        <strong id="estadoSync">Preparando...</strong>
+      </p>
+
+      <section class="panel">
+        <h2 id="tituloFormulario">Agregar material</h2>
+
+        <form id="formulario">
+          <div class="grid">
+            <div>
+              <label for="material">Nombre del material</label>
+              <input
+                id="material"
+                required
+                minlength="2"
+                maxlength="80"
+                placeholder="Cuaderno de rayas"
+              />
+            </div>
+
+            <div>
+              <label for="categoria">Categoría</label>
+              <select id="categoria" required>
+                <option value="">Selecciona…</option>
+                <option>Papelería</option>
+                <option>Escritura</option>
+                <option>Arte</option>
+                <option>Organización</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="cantidad">Cantidad</label>
+              <input
+                id="cantidad"
+                type="number"
+                min="0"
+                max="99999"
+                step="1"
+                required
+                placeholder="12"
+              />
+            </div>
+
+            <div>
+              <label for="precio">Precio unitario (MXN)</label>
+              <div class="campo-precio">
+                <span>$</span>
+                <input
+                  id="precio"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  placeholder="25.50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label for="marca">Marca</label>
+              <input
+                id="marca"
+                required
+                minlength="2"
+                maxlength="60"
+                placeholder="Ejemplo"
+              />
+            </div>
+
+            <div>
+              <label for="ubicacion">Ubicación</label>
+              <input
+                id="ubicacion"
+                required
+                minlength="2"
+                maxlength="80"
+                placeholder="Estante A"
+              />
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="guardar" type="submit">Guardar material</button>
+            <button id="cancelar" type="button" class="secondary" hidden>
+              Cancelar edición
+            </button>
+            <button type="reset" class="secondary">Limpiar</button>
+          </div>
+        </form>
+
+        <p id="mensaje" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel">
+        <h2>Listado de materiales</h2>
+        <p class="small">
+          Los materiales se guardan primero en el navegador. Cuando hay
+          conexión, los cambios pendientes se envían automáticamente a Supabase.
+        </p>
+
+        <button class="secondary" type="button" id="recargar">
+          Actualizar listado
+        </button>
+
+        <button type="button" id="sincronizar">Sincronizar ahora</button>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Material</th>
+                <th>Categoría</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th>Marca</th>
+                <th>Ubicación</th>
+                <th>Status</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="listado"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+
+    <script>
+      const TABLA = "inventario_materiales";
+
+      const CLAVE_MATERIALES = "inventario_escolar_materiales_v1";
+      const CLAVE_PENDIENTES = "inventario_escolar_pendientes_v1";
+
+      const config = window.SUPABASE_CONFIG || {};
+      const SUPABASE_URL = config.URL;
+      const SUPABASE_KEY = config.API_KEY;
+
+      const conexion = document.getElementById("conexion");
+      const estadoSync = document.getElementById("estadoSync");
+      const form = document.getElementById("formulario");
+      const listado = document.getElementById("listado");
+      const mensaje = document.getElementById("mensaje");
+      const botonGuardar = document.getElementById("guardar");
+      const botonCancelar = document.getElementById("cancelar");
+      const botonRecargar = document.getElementById("recargar");
+      const botonSincronizar = document.getElementById("sincronizar");
+      const tituloFormulario = document.getElementById("tituloFormulario");
+
+      let cliente = null;
+      let editandoId = null;
+      let materiales = [];
+      let ocupado = false;
+      let sincronizando = false;
+
+      function crearId() {
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+          return window.crypto.randomUUID();
+        }
+
+        return (
+          "material-" + Date.now() + "-" + Math.random().toString(16).slice(2)
+        );
+      }
+
+      function leerLocal(clave, predeterminado) {
+        try {
+          const valor = localStorage.getItem(clave);
+          return valor ? JSON.parse(valor) : predeterminado;
+        } catch (error) {
+          console.error("Error al leer almacenamiento local:", error);
+          return predeterminado;
+        }
+      }
+
+      function guardarLocal() {
+        try {
+          localStorage.setItem(CLAVE_MATERIALES, JSON.stringify(materiales));
+          actualizarEstadoSync();
+          return true;
+        } catch (error) {
+          console.error("Error al guardar en el navegador:", error);
+          mostrarMensaje(
+            "No se pudo guardar en el navegador. Revisa el espacio disponible.",
+            true,
+          );
+          return false;
+        }
+      }
+
+      function obtenerPendientes() {
+        const pendientes = leerLocal(CLAVE_PENDIENTES, []);
+        return Array.isArray(pendientes) ? pendientes : [];
+      }
+
+      function guardarPendientes(pendientes) {
+        try {
+          localStorage.setItem(CLAVE_PENDIENTES, JSON.stringify(pendientes));
+          actualizarEstadoSync();
+          return true;
+        } catch (error) {
+          console.error("Error al guardar cambios pendientes:", error);
+          mostrarMensaje(
+            "No se pudieron guardar los cambios pendientes en el navegador.",
+            true,
+          );
+          return false;
+        }
+      }
+
+      function actualizarEstadoSync() {
+        const cantidad = obtenerPendientes().length;
+
+        if (sincronizando) {
+          estadoSync.textContent = "Sincronizando cambios...";
+        } else if (cantidad > 0) {
+          estadoSync.textContent = cantidad + " cambio(s) pendiente(s)";
+        } else {
+          estadoSync.textContent = "Todo sincronizado";
+        }
+
+        botonSincronizar.disabled =
+          sincronizando || cantidad === 0 || !navigator.onLine || !cliente;
+      }
+
+      function mostrarMensaje(texto, error = false) {
+        mensaje.textContent = texto;
+        mensaje.style.color = error ? "#b13737" : "#193334";
+      }
+
+      function actualizarConexion() {
+        if (!navigator.onLine) {
+          conexion.textContent = "Sin conexión a internet";
+          conexion.className = "offline";
+        } else if (!cliente) {
+          conexion.textContent = "Supabase no está configurado";
+          conexion.className = "offline";
+        } else {
+          conexion.textContent = "Con conexión a internet";
+          conexion.className = "online";
+        }
+
+        actualizarEstadoSync();
+      }
+
+      function iniciarCliente() {
+        if (
+          !window.supabase ||
+          !SUPABASE_URL ||
+          !SUPABASE_KEY ||
+          SUPABASE_KEY === "PEGA_AQUI_TU_CLAVE_PUBLISHABLE"
+        ) {
+          cliente = null;
+          actualizarConexion();
+          mostrarMensaje(
+            "Supabase no está configurado. Los datos podrán guardarse localmente, pero no sincronizarse.",
+            true,
+          );
+          return false;
+        }
+
+        try {
+          cliente = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          actualizarConexion();
+          return true;
+        } catch (error) {
+          cliente = null;
+          actualizarConexion();
+          mostrarMensaje("Error al iniciar Supabase: " + error.message, true);
+          return false;
+        }
+      }
+
+      function leerCampos() {
+        return {
+          material: document.getElementById("material").value.trim(),
+          categoria: document.getElementById("categoria").value,
+          cantidad: Number(document.getElementById("cantidad").value),
+          precio: Number(document.getElementById("precio").value),
+          marca: document.getElementById("marca").value.trim(),
+          ubicacion: document.getElementById("ubicacion").value.trim(),
+        };
+      }
+
+      function limpiarFormulario() {
+        editandoId = null;
+        form.reset();
+        botonGuardar.textContent = "Guardar material";
+        botonCancelar.hidden = true;
+        tituloFormulario.textContent = "Agregar material";
+        mostrarMensaje("");
+      }
+
+      function comenzarEdicion(material) {
+        editandoId = material.cliente_id;
+
+        for (const campo of [
+          "material",
+          "categoria",
+          "cantidad",
+          "precio",
+          "marca",
+          "ubicacion",
+        ]) {
+          document.getElementById(campo).value = material[campo] ?? "";
+        }
+
+        botonGuardar.textContent = "Guardar cambios";
+        botonCancelar.hidden = false;
+        tituloFormulario.textContent = "Editar material";
+        mostrarMensaje(
+          "Editando material. Los cambios se guardarán en el navegador y quedarán pendientes de sincronización si no hay internet.",
+        );
+        form.scrollIntoView({ behavior: "smooth" });
+      }
+
+      function mostrarMateriales() {
+        listado.replaceChildren();
+
+        for (const material of materiales) {
+          const tr = listado.insertRow();
+
+          for (const campo of [
+            "material",
+            "categoria",
+            "cantidad",
+            "precio",
+            "marca",
+            "ubicacion",
+            "status",
+          ]) {
+            const td = tr.insertCell();
+
+            if (campo === "precio") {
+              td.textContent = "$" + Number(material.precio || 0).toFixed(2);
+            } else {
+              td.textContent = String(material[campo] ?? "");
+            }
+
+            if (campo === "status") {
+              td.className =
+                material.status === "online" ? "online" : "offline";
+            }
+          }
+
+          const acciones = tr.insertCell();
+
+          const editar = document.createElement("button");
+          editar.type = "button";
+          editar.className = "edit";
+          editar.textContent = "Editar";
+          editar.disabled = ocupado;
+          editar.addEventListener("click", () => comenzarEdicion(material));
+
+          const eliminar = document.createElement("button");
+          eliminar.type = "button";
+          eliminar.className = "delete";
+          eliminar.textContent = "Eliminar";
+          eliminar.disabled = ocupado;
+          eliminar.addEventListener("click", () =>
+            eliminarMaterial(material.cliente_id),
+          );
+
+          acciones.append(editar, eliminar);
+        }
+
+        if (materiales.length === 0) {
+          const tr = listado.insertRow();
+          const td = tr.insertCell();
+          td.colSpan = 8;
+          td.textContent = "No hay materiales registrados.";
+        }
+      }
+
+      function ponerPendiente(registro, accion) {
+        const pendientes = obtenerPendientes();
+
+        // Se conserva solamente la última operación de cada registro.
+        const filtrados = pendientes.filter(
+          (item) => item.cliente_id !== registro.cliente_id,
+        );
+
+        filtrados.push({
+          ...registro,
+          accion,
+          fecha: Date.now(),
+        });
+
+        return guardarPendientes(filtrados);
+      }
+
+      function guardarCambioLocal(registro, id, accion) {
+        if (accion === "eliminar") {
+          materiales = materiales.filter((item) => item.cliente_id !== id);
+
+          if (!guardarLocal()) return false;
+
+          const pendiente = obtenerPendientes().find(
+            (item) => item.cliente_id === id,
+          );
+
+          return ponerPendiente(
+            {
+              cliente_id: id,
+              ...(pendiente || {}),
+            },
+            "eliminar",
+          );
+        }
+
+        const registroLocal = {
+          ...registro,
+          cliente_id: id,
+          status: "offline",
+        };
+
+        const indice = materiales.findIndex((item) => item.cliente_id === id);
+
+        if (indice >= 0) {
+          materiales[indice] = registroLocal;
+        } else {
+          materiales.push(registroLocal);
+        }
+
+        if (!guardarLocal()) return false;
+
+        return ponerPendiente(registroLocal, "guardar");
+      }
+
+      async function cargarMateriales() {
+        // Siempre se muestra primero lo que hay guardado en el navegador.
+        materiales = leerLocal(CLAVE_MATERIALES, []);
+        if (!Array.isArray(materiales)) materiales = [];
+        mostrarMateriales();
+
+        if (!cliente || !navigator.onLine) {
+          actualizarConexion();
+          return;
+        }
+
+        // No reemplazar los datos locales mientras existan operaciones pendientes.
+        if (obtenerPendientes().length > 0) {
+          await sincronizarPendientes();
+          return;
+        }
+
+        try {
+          const { data, error } = await cliente
+            .from(TABLA)
+            .select(
+              "cliente_id, material, categoria, cantidad, precio, marca, ubicacion, status",
+            )
+            .order("material", { ascending: true });
+
+          if (error) throw error;
+
+          materiales = (data || []).map((item) => ({
+            ...item,
+            status: "online",
+          }));
+
+          guardarLocal();
+          mostrarMateriales();
+          actualizarConexion();
+        } catch (error) {
+          console.error("Error al consultar Supabase:", error);
+          mostrarMensaje(
+            "No se pudieron cargar los materiales desde Supabase. Se mantienen los datos locales. " +
+              error.message,
+            true,
+          );
+        }
+      }
+
+      async function sincronizarPendientes() {
+        if (sincronizando || !cliente || !navigator.onLine) {
+          actualizarConexion();
+          return;
+        }
+
+        let pendientes = obtenerPendientes();
+
+        if (pendientes.length === 0) {
+          actualizarEstadoSync();
+          return;
+        }
+
+        sincronizando = true;
+        actualizarEstadoSync();
+
+        let errores = [];
+
+        try {
+          // Procesar en orden para respetar las últimas modificaciones.
+          while (pendientes.length > 0 && navigator.onLine) {
+            const operacion = pendientes[0];
+
+            try {
+              if (operacion.accion === "eliminar") {
+                const { error } = await cliente
+                  .from(TABLA)
+                  .delete()
+                  .eq("cliente_id", operacion.cliente_id);
+
+                if (error) throw error;
+
+                materiales = materiales.filter(
+                  (item) => item.cliente_id !== operacion.cliente_id,
+                );
+              } else {
+                const { error } = await cliente.from(TABLA).upsert(
+                  {
+                    cliente_id: operacion.cliente_id,
+                    material: operacion.material,
+                    categoria: operacion.categoria,
+                    cantidad: operacion.cantidad,
+                    precio: operacion.precio,
+                    marca: operacion.marca,
+                    ubicacion: operacion.ubicacion,
+                    status: "online",
+                  },
+                  { onConflict: "cliente_id" },
+                );
+
+                if (error) throw error;
+
+                const indice = materiales.findIndex(
+                  (item) => item.cliente_id === operacion.cliente_id,
+                );
+
+                const actualizado = { ...operacion, status: "online" };
+                delete actualizado.accion;
+                delete actualizado.fecha;
+
+                if (indice >= 0) {
+                  materiales[indice] = actualizado;
+                } else {
+                  materiales.push(actualizado);
+                }
+              }
+
+              // Quitar solamente la operación que acaba de procesarse.
+              pendientes = obtenerPendientes().filter(
+                (item) => item.cliente_id !== operacion.cliente_id,
+              );
+              guardarPendientes(pendientes);
+              guardarLocal();
+            } catch (error) {
+              console.error("Error al sincronizar:", error);
+              errores.push(
+                (operacion.material || operacion.cliente_id) +
+                  ": " +
+                  error.message,
+              );
+              break;
+            }
+          }
+
+          mostrarMateriales();
+
+          if (errores.length > 0) {
+            mostrarMensaje(
+              "Algunos cambios siguen pendientes. Revisa los permisos y la configuración de Supabase.\n" +
+                errores.join("\n"),
+              true,
+            );
+          } else if (obtenerPendientes().length === 0) {
+            mostrarMensaje(
+              "Todos los cambios se sincronizaron correctamente con Supabase.",
+            );
+          }
+        } finally {
+          sincronizando = false;
+          actualizarConexion();
+          mostrarMateriales();
+        }
+      }
+
+      form.addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+
+        if (!form.reportValidity() || ocupado) return;
+
+        const campos = leerCampos();
+
+        if (
+          !Number.isInteger(campos.cantidad) ||
+          campos.cantidad < 0 ||
+          campos.cantidad > 99999
+        ) {
+          mostrarMensaje("Ingresa una cantidad válida.", true);
+          return;
+        }
+
+        if (!Number.isFinite(campos.precio) || campos.precio < 0) {
+          mostrarMensaje("Ingresa un precio válido.", true);
+          return;
+        }
+
+        ocupado = true;
+        botonGuardar.disabled = true;
+
+        try {
+          if (editandoId !== null) {
+            const id = editandoId;
+
+            if (!guardarCambioLocal(campos, id, "guardar")) return;
+
+            limpiarFormulario();
+
+            if (cliente && navigator.onLine) {
+              await sincronizarPendientes();
+            } else {
+              mostrarMensaje(
+                "Cambios guardados en el navegador. Se sincronizarán cuando vuelva internet.",
+              );
+            }
+          } else {
+            const id = crearId();
+
+            if (!guardarCambioLocal(campos, id, "guardar")) return;
+
+            form.reset();
+
+            if (cliente && navigator.onLine) {
+              await sincronizarPendientes();
+            } else {
+              mostrarMensaje(
+                "Material guardado localmente. Se sincronizará cuando vuelva internet.",
+              );
+            }
+          }
+        } finally {
+          ocupado = false;
+          botonGuardar.disabled = false;
+          mostrarMateriales();
+        }
+      });
+
+      async function eliminarMaterial(id) {
+        if (!id) {
+          mostrarMensaje("No se encontró el identificador del material.", true);
+          return;
+        }
+
+        if (
+          !confirm(
+            "¿Eliminar este material? Si no hay internet, la eliminación quedará pendiente.",
+          )
+        ) {
+          return;
+        }
+
+        if (!guardarCambioLocal({}, id, "eliminar")) return;
+
+        if (editandoId === id) limpiarFormulario();
+
+        mostrarMateriales();
+
+        if (cliente && navigator.onLine) {
+          await sincronizarPendientes();
+        } else {
+          mostrarMensaje(
+            "Material eliminado del listado local. La eliminación se sincronizará cuando vuelva internet.",
+          );
+        }
+      }
+
+      form.addEventListener("reset", () => {
+        editandoId = null;
+        botonGuardar.textContent = "Guardar material";
+        botonCancelar.hidden = true;
+        tituloFormulario.textContent = "Agregar material";
+      });
+
+      botonCancelar.addEventListener("click", limpiarFormulario);
+
+      botonRecargar.addEventListener("click", async () => {
+        await cargarMateriales();
+      });
+
+      botonSincronizar.addEventListener("click", async () => {
+        await sincronizarPendientes();
+      });
+
+      window.addEventListener("online", async () => {
+        actualizarConexion();
+        mostrarMensaje(
+          "Internet disponible. Intentando sincronizar los cambios...",
+        );
+        await sincronizarPendientes();
+        await cargarMateriales();
+      });
+
+      window.addEventListener("offline", () => {
+        actualizarConexion();
+        mostrarMensaje(
+          "Se perdió la conexión. Puedes seguir trabajando con los datos guardados en el navegador.",
+        );
+      });
+
+      // Inicializar la pantalla con los datos guardados localmente.
+      materiales = leerLocal(CLAVE_MATERIALES, []);
+      if (!Array.isArray(materiales)) materiales = [];
+      mostrarMateriales();
+      iniciarCliente();
+      actualizarConexion();
+
+      if (cliente && navigator.onLine) {
+        cargarMateriales();
+      }
+    </script>
+  </body>
+</html>
